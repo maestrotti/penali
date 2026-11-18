@@ -2,7 +2,7 @@
 <html lang="bs">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#052a33">
 <title>Penali na Atolu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,11 +25,12 @@
   --body:'Rubik',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 @supports(height:100dvh){html,body{height:100dvh}}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #stage{position:relative;height:100%;width:100%;max-width:520px;margin:0 auto;overflow:hidden;background:#7fd3ee}
-#cv{position:absolute;inset:0;display:block;touch-action:none}
+#cv{position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
 button{font-family:var(--body);cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 
@@ -90,6 +91,20 @@ input.t{font-family:var(--body);font-size:17px;padding:12px 14px;border:2px soli
 @keyframes pl{50%{transform:scale(.5);opacity:.5}}
 .final{font-family:var(--display);font-size:46px;text-align:center;color:var(--ink);font-variant-numeric:tabular-nums}
 .sep{height:1px;background:var(--panel-line);border:0;margin:2px 0}
+html,body{overscroll-behavior:none}
+#stage{touch-action:none}
+#pad{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(66px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 32px),380px);display:grid;grid-template-columns:1fr 1.1fr 1fr;grid-template-rows:76px 76px;gap:10px;grid-template-areas:"tl c tr" "bl c br"}
+#pad button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:3px solid #fff;border-radius:20px;background:rgba(255,253,248,.96);color:var(--deep);box-shadow:0 6px 16px rgba(3,30,38,.3);touch-action:manipulation;padding:0;min-width:0}
+#pad button span{font-size:12px;font-weight:600;color:var(--ink-soft)}
+#pad button[data-z=TL]{grid-area:tl}
+#pad button[data-z=TR]{grid-area:tr}
+#pad button[data-z=BL]{grid-area:bl}
+#pad button[data-z=BR]{grid-area:br}
+#pad button[data-z=C]{grid-area:c}
+#pad button:active:not(:disabled){transform:scale(.95)}
+#pad button.on{background:var(--coral);color:#fff}
+#pad button.on span{color:#fff}
+#pad button:disabled:not(.on){opacity:.4}
 </style>
 </head>
 <body>
@@ -104,6 +119,13 @@ input.t{font-family:var(--body);font-size:17px;padding:12px 14px;border:2px soli
   </div>
   <div id="banner" hidden><span id="bannerText"></span><i id="timer"></i></div>
   <div id="flash" aria-live="polite"></div>
+<div id="pad" hidden>
+  <button data-z="TL"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-45deg)"><path d="M12 20V5M6 11l6-6 6 6"/></svg><span>gore lijevo</span></button>
+  <button data-z="C"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="6"/></svg><span>sredina</span></button>
+  <button data-z="TR"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(45deg)"><path d="M12 20V5M6 11l6-6 6 6"/></svg><span>gore desno</span></button>
+  <button data-z="BL"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(-135deg)"><path d="M12 20V5M6 11l6-6 6 6"/></svg><span>dolje lijevo</span></button>
+  <button data-z="BR"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(135deg)"><path d="M12 20V5M6 11l6-6 6 6"/></svg><span>dolje desno</span></button>
+</div>
 
   <button class="corner" id="exitBtn" hidden>Izlaz</button>
   <button class="corner" id="muteBtn" aria-pressed="false">Zvuk: uključen</button>
@@ -168,7 +190,7 @@ function layout() {
   G.w = gw; G.h = gw * 0.40; G.x = (W - gw) / 2;
   G.bottom = H * 0.50; G.top = G.bottom - G.h;
   G.horizon = H * 0.25; G.shore = H * 0.46;
-  G.spot = { x: W / 2, y: H * 0.80 };
+  G.spot = { x: W / 2, y: H * 0.69 };
   G.r = clamp(W * 0.052, 16, 26);
 }
 function resize() {
@@ -179,15 +201,18 @@ function resize() {
   layout();
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stageEl);
 const gp = (gx, gy) => ({ x: G.x + gx * G.w, y: G.top + gy * G.h });
 
 /* ---------- zones ---------- */
 const ZONES = [
-  { id: 'TL', x0: 0, x1: .34, y0: 0, y1: .5, a: '↖' },
-  { id: 'TR', x0: .66, x1: 1, y0: 0, y1: .5, a: '↗' },
-  { id: 'C',  x0: .34, x1: .66, y0: 0, y1: 1, a: '●' },
-  { id: 'BL', x0: 0, x1: .34, y0: .5, y1: 1, a: '↙' },
-  { id: 'BR', x0: .66, x1: 1, y0: .5, y1: 1, a: '↘' }
+  { id: 'TL', x0: 0, x1: .34, y0: 0, y1: .5, ang: -Math.PI / 4 },
+  { id: 'TR', x0: .66, x1: 1, y0: 0, y1: .5, ang: Math.PI / 4 },
+  { id: 'C',  x0: .34, x1: .66, y0: 0, y1: 1, ang: 0 },
+  { id: 'BL', x0: 0, x1: .34, y0: .5, y1: 1, ang: -3 * Math.PI / 4 },
+  { id: 'BR', x0: .66, x1: 1, y0: .5, y1: 1, ang: 3 * Math.PI / 4 }
 ];
 const ZIDS = ZONES.map(z => z.id);
 const DIVE = { TL: [.2, .36], TR: [.8, .36], BL: [.2, .78], BR: [.8, .78], C: [.5, .45] };
@@ -555,10 +580,10 @@ function bannerText() {
   if (phase !== 'play') return '';
   if (!rem) return 'Protivnik je izašao iz sobe.';
   switch (stage) {
-    case 'aim': return 'Tvoj udarac. Dodirni gdje pucaš i pusti.';
+    case 'aim': return 'Tvoj udarac. Povuci prst od lopte do mjesta gdje pucaš, pa pusti.';
     case 'wait_commit': return 'Čekam golmana…';
     case 'wait_reveal': return 'Udarac je poslan…';
-    case 'pick': return 'Braniš. Dodirni stranu u koju skačeš.';
+    case 'pick': return 'Braniš. Odaberi stranu u koju skačeš.';
     case 'picked': return 'Zaključeno. Čekam udarac…';
     default: return '';
   }
@@ -590,6 +615,9 @@ function renderAll() {
     rm.classList.toggle('shoots', live && shooterMe);
     ro.classList.toggle('shoots', live && !shooterMe);
   }
+  const showPad = phase === 'play' && (stage === 'pick' || stage === 'picked');
+  $('pad').hidden = !showPad;
+  if (showPad) padBtns.forEach(b => { b.classList.toggle('on', myPick === b.dataset.z); b.disabled = stage === 'picked'; });
   const bt = bannerText();
   $('banner').hidden = !bt;
   $('bannerText').textContent = bt;
@@ -615,10 +643,10 @@ function flash(type) {
 }
 
 /* ---------- input ---------- */
+const AIM_LIFT = 54;   // target sits above the fingertip so the finger never hides it
 const pt = e => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-function inAimRegion(p) {
-  return p.x >= G.x - .22 * G.w && p.x <= G.x + 1.22 * G.w && p.y >= G.top - .4 * G.h && p.y <= G.bottom + .35 * G.h;
-}
+const tgt = p => ({ x: clamp(p.x, 8, W - 8), y: clamp(p.y - AIM_LIFT, 8, H - 8) });
+const nearBall = t => Math.hypot(t.x - G.spot.x, t.y - G.spot.y) < G.r * 3.2;
 function zoneAt(p) {
   const gx = (p.x - G.x) / G.w, gy = (p.y - G.top) / G.h;
   if (gx < 0 || gx > 1 || gy < 0 || gy > 1) return null;
@@ -628,19 +656,19 @@ cv.addEventListener('pointerdown', e => {
   ensureAudio();
   if (phase !== 'play') return;
   const p = pt(e);
-  if (stage === 'aim' && inAimRegion(p)) {
-    aim = p;
+  if (stage === 'aim') {
+    aim = tgt(p);
     try { cv.setPointerCapture(e.pointerId); } catch (er) {}
   } else if (stage === 'pick') {
     const z = zoneAt(p);
     if (z) pickZone(z);
   }
 });
-cv.addEventListener('pointermove', e => { if (aim && stage === 'aim') aim = pt(e); });
+cv.addEventListener('pointermove', e => { if (aim && stage === 'aim') aim = tgt(pt(e)); });
 cv.addEventListener('pointerup', e => {
   if (!aim || stage !== 'aim') { aim = null; return; }
-  const p = pt(e); aim = null;
-  if (inAimRegion(p)) shoot(p);
+  const t = tgt(pt(e)); aim = null;
+  if (!nearBall(t)) shoot(t);
 });
 cv.addEventListener('pointercancel', () => { aim = null; });
 
@@ -801,20 +829,27 @@ function drawGoalFront(now) {
   ctx.strokeStyle = 'rgba(5,40,50,.28)'; ctx.lineWidth = lw + 2; ctx.save(); ctx.translate(2, 3); path(); ctx.stroke(); ctx.restore();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = lw; path(); ctx.stroke();
 }
+function arrow(cx, cy, ang, sz) {
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(0, sz); ctx.lineTo(0, -sz); ctx.moveTo(-sz * .62, -sz * .38); ctx.lineTo(0, -sz); ctx.lineTo(sz * .62, -sz * .38);
+  ctx.stroke(); ctx.restore();
+}
 function drawZones() {
   const picking = stage === 'pick', picked = stage === 'picked';
   if (!(picking || picked)) return;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   ZONES.forEach(z => {
     const a = gp(z.x0, z.y0), b = gp(z.x1, z.y1), x = a.x + 3, y = a.y + 3, w = b.x - a.x - 6, h = b.y - a.y - 6;
     const chosen = picked && myPick === z.id;
     if (picked && !chosen) return;
-    ctx.fillStyle = chosen ? 'rgba(214,61,36,.62)' : 'rgba(255,255,255,.2)';
+    ctx.fillStyle = chosen ? 'rgba(214,61,36,.75)' : 'rgba(5,40,50,.3)';
     rr(x, y, w, h, 10); ctx.fill();
-    ctx.strokeStyle = chosen ? '#fff' : 'rgba(255,255,255,.85)'; ctx.lineWidth = 2; ctx.setLineDash(chosen ? [] : [7, 5]);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.setLineDash(chosen ? [] : [8, 5]);
     rr(x, y, w, h, 10); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#fff'; ctx.font = '600 ' + Math.round(Math.min(w, h) * .5) + 'px Rubik,system-ui,sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(z.a, x + w / 2, y + h / 2 + 1);
+    ctx.lineWidth = 4;
+    const sz = Math.min(w, h) * .26;
+    if (z.id === 'C') { ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, sz * .8, 0, Math.PI * 2); ctx.stroke(); }
+    else arrow(x + w / 2, y + h / 2, z.ang, sz);
   });
 }
 
@@ -860,7 +895,8 @@ function ballState(now) {
   if (tt < fl0) return rest;
   if (tt < fl0 + fl) {
     const e = (tt - fl0) / fl, ee = 1 - Math.pow(1 - e, 1.6);
-    return { x: lerp(sp.x, tp.x, ee), y: lerp(sp.y, tp.y, ee) - Math.sin(Math.PI * ee) * H * .05, r: lerp(G.r, G.r * .42, ee), a: 1, rot: tt * 14, ground: false, net: false };
+    const q = bez(sp, tp, ee);
+    return { x: q.x, y: q.y, r: lerp(G.r, G.r * .42, ee), a: 1, rot: tt * 14, ground: false, net: false };
   }
   const dt = tt - fl0 - fl, r0 = G.r * .42, dir = tp.x < G.x + G.w / 2 ? -1 : 1, b = backPanel();
   if (anim.type === 'goal') {
@@ -893,16 +929,38 @@ function drawBall(bs) {
   ctx.stroke();
   ctx.restore();
 }
+function bez(S, T, e) {
+  const d = Math.hypot(T.x - S.x, T.y - S.y), L = clamp(d * .16, 14, 80);
+  const cx = (S.x + T.x) / 2, cy = (S.y + T.y) / 2 - 2 * L, u = 1 - e;
+  return { x: u * u * S.x + 2 * u * e * cx + e * e * T.x, y: u * u * S.y + 2 * u * e * cy + e * e * T.y };
+}
 function drawAimMark() {
-  let p = null, locked = false;
-  if (stage === 'aim' && aim) p = aim;
-  else if ((stage === 'wait_commit' || stage === 'wait_reveal') && pendingShot) { p = gp(pendingShot.gx, pendingShot.gy); locked = true; }
-  if (!p) return;
-  ctx.save(); ctx.translate(p.x, p.y);
-  ctx.strokeStyle = 'rgba(5,40,50,.55)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.stroke();
-  ctx.strokeStyle = locked ? '#ffcf3f' : '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); [[-26, -9], [9, 26]].forEach(s => { ctx.moveTo(s[0], 0); ctx.lineTo(s[1], 0); ctx.moveTo(0, s[0]); ctx.lineTo(0, s[1]); }); ctx.stroke();
-  ctx.fillStyle = '#d63d24'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+  const S = G.spot, now = performance.now();
+  if (stage === 'aim' && !aim) {
+    const pulse = 1 + .12 * Math.sin(now / 220), bob = Math.sin(now / 260) * 5;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#ffcf3f'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(S.x, S.y, G.r * 1.7 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(5,40,50,.55)'; ctx.lineWidth = 9; arrow(S.x, S.y - G.r * 3.6 + bob, 0, 16);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; arrow(S.x, S.y - G.r * 3.6 + bob, 0, 16);
+    return;
+  }
+  let T = null, locked = false;
+  if (stage === 'aim' && aim) T = aim;
+  else if ((stage === 'wait_commit' || stage === 'wait_reveal') && pendingShot) { T = gp(pendingShot.gx, pendingShot.gy); locked = true; }
+  if (!T) return;
+  const near = stage === 'aim' && nearBall(T), n = 15;
+  for (let k = 1; k <= n; k++) {
+    const q = bez(S, T, k / (n + 1)), r = lerp(6, 3, k / n);
+    ctx.fillStyle = 'rgba(5,40,50,.5)'; ctx.beginPath(); ctx.arc(q.x, q.y + 1, r + 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = near ? 'rgba(255,255,255,.45)' : (locked ? '#ffcf3f' : '#fff'); ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  if (near) return;
+  ctx.save(); ctx.translate(T.x, T.y); ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(5,40,50,.55)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = locked ? '#ffcf3f' : '#fff'; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc(0, 0, 21, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); [[-32, -11], [11, 32]].forEach(p => { ctx.moveTo(p[0], 0); ctx.lineTo(p[1], 0); ctx.moveTo(0, p[0]); ctx.lineTo(0, p[1]); }); ctx.stroke();
+  ctx.fillStyle = '#d63d24'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
 function burst() {
@@ -939,6 +997,8 @@ function frame(now) {
 }
 
 /* ---------- wiring ---------- */
+const padBtns = Array.from(document.querySelectorAll('#pad button'));
+padBtns.forEach(b => b.addEventListener('click', () => { ensureAudio(); pickZone(b.dataset.z); }));
 $('btnBot').addEventListener('click', startBot);
 $('btnCreate').addEventListener('click', () => createRoom());
 $('btnJoin').addEventListener('click', () => {
